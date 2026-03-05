@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Store Reviews Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-chart-line text-blue-600"></i>
+                App Store Reviews Analytics
+            </h1>
+            <p class="text-gray-600">Analyze sentiment and insights from App Store reviews</p>
+        </div>
+
+        <div class="max-w-4xl mx-auto mb-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-semibold mb-2">App Store URL</label>
+                    <input 
+                        type="text" 
+                        id="appUrl" 
+                        placeholder="https://apps.apple.com/us/app/instagram/id389801252"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-semibold mb-2">Number of Pages (1-50)</label>
+                    <input 
+                        type="number" 
+                        id="maxPages" 
+                        value="10" 
+                        min="1" 
+                        max="50"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                    <p class="text-sm text-gray-500 mt-1">Each page contains ~10 reviews</p>
+                </div>
+                <button 
+                    onclick="analyzeApp()" 
+                    id="analyzeBtn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200"
+                >
+                    <i class="fas fa-search mr-2"></i>Analyze Reviews
+                </button>
+            </div>
+        </div>
+
+        <div id="loading" class="hidden text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600"></div>
+            <p class="text-gray-600 mt-4 text-lg">Fetching and analyzing reviews...</p>
+        </div>
+
+        <div id="error" class="hidden max-w-4xl mx-auto mb-8">
+            <div class="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg">
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                <span id="errorMessage"></span>
+            </div>
+        </div>
+
+        <div id="results" class="hidden">
+            <div id="appInfo" class="max-w-4xl mx-auto mb-8 bg-white rounded-lg shadow-md p-6">
+                <div class="flex items-center gap-6">
+                    <img id="appIcon" src="" alt="App Icon" class="w-24 h-24 rounded-xl shadow-md">
+                    <div class="flex-1">
+                        <h2 id="appName" class="text-2xl font-bold text-gray-800"></h2>
+                        <p id="appDeveloper" class="text-gray-600"></p>
+                        <div class="flex items-center gap-4 mt-2">
+                            <div class="flex items-center">
+                                <i class="fas fa-star text-yellow-400 mr-1"></i>
+                                <span id="appRating" class="font-semibold"></span>
+                            </div>
+                            <div class="text-gray-600">
+                                <i class="fas fa-users mr-1"></i>
+                                <span id="ratingCount"></span> ratings
+                            </div>
+                            <div class="text-gray-600">
+                                <i class="fas fa-tag mr-1"></i>
+                                <span id="appGenre"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm">Total Reviews</p>
+                            <p id="totalReviews" class="text-3xl font-bold text-gray-800"></p>
+                        </div>
+                        <i class="fas fa-comments text-4xl text-blue-500"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm">Avg Rating</p>
+                            <p id="avgRating" class="text-3xl font-bold text-gray-800"></p>
+                        </div>
+                        <i class="fas fa-star text-4xl text-yellow-400"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm">Sentiment</p>
+                            <p id="avgSentiment" class="text-3xl font-bold text-gray-800"></p>
+                        </div>
+                        <i class="fas fa-smile text-4xl text-green-500"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-600 text-sm">Subjectivity</p>
+                            <p id="avgSubjectivity" class="text-3xl font-bold text-gray-800"></p>
+                        </div>
+                        <i class="fas fa-brain text-4xl text-purple-500"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Rating Distribution</h3>
+                    <canvas id="ratingChart"></canvas>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Sentiment Analysis</h3>
+                    <canvas id="sentimentChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Recent Reviews</h3>
+                <div id="reviewsList" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ratingChart, sentimentChart;
+
+        async function analyzeApp() {
+            const url = document.getElementById('appUrl').value.trim();
+            const maxPages = document.getElementById('maxPages').value;
+
+            if (!url) {
+                showError('Please enter an App Store URL');
+                return;
+            }
+
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+            document.getElementById('analyzeBtn').disabled = true;
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url, max_pages: maxPages })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to analyze app');
+                }
+
+                displayResults(data);
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('analyzeBtn').disabled = false;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('error').classList.remove('hidden');
+        }
+
+        function displayResults(data) {
+            const { metadata, analytics, reviews } = data;
+
+            document.getElementById('appIcon').src = metadata.icon_url || '';
+            document.getElementById('appName').textContent = metadata.name;
+            document.getElementById('appDeveloper').textContent = metadata.developer;
+            document.getElementById('appRating').textContent = metadata.rating?.toFixed(1) || 'N/A';
+            document.getElementById('ratingCount').textContent = metadata.rating_count?.toLocaleString() || '0';
+            document.getElementById('appGenre').textContent = metadata.genre || 'N/A';
+
+            document.getElementById('totalReviews').textContent = analytics.total_reviews;
+            document.getElementById('avgRating').textContent = analytics.average_rating;
+            document.getElementById('avgSentiment').textContent = analytics.average_polarity?.toFixed(2) || '0';
+            document.getElementById('avgSubjectivity').textContent = analytics.average_subjectivity?.toFixed(2) || '0';
+
+            createRatingChart(analytics.rating_distribution);
+            createSentimentChart(analytics.sentiment_distribution);
+            displayReviews(reviews);
+
+            document.getElementById('results').classList.remove('hidden');
+        }
+
+        function createRatingChart(distribution) {
+            const ctx = document.getElementById('ratingChart').getContext('2d');
+            
+            if (ratingChart) {
+                ratingChart.destroy();
+            }
+
+            ratingChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['1 Star', '2 Stars', '3 Stars', '4 Stars', '5 Stars'],
+                    datasets: [{
+                        label: 'Number of Reviews',
+                        data: [
+                            distribution['1'],
+                            distribution['2'],
+                            distribution['3'],
+                            distribution['4'],
+                            distribution['5']
+                        ],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(251, 146, 60, 0.8)',
+                            'rgba(250, 204, 21, 0.8)',
+                            'rgba(163, 230, 53, 0.8)',
+                            'rgba(34, 197, 94, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgb(239, 68, 68)',
+                            'rgb(251, 146, 60)',
+                            'rgb(250, 204, 21)',
+                            'rgb(163, 230, 53)',
+                            'rgb(34, 197, 94)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function createSentimentChart(distribution) {
+            const ctx = document.getElementById('sentimentChart').getContext('2d');
+            
+            if (sentimentChart) {
+                sentimentChart.destroy();
+            }
+
+            sentimentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Positive', 'Neutral', 'Negative'],
+                    datasets: [{
+                        data: [
+                            distribution.positive,
+                            distribution.neutral,
+                            distribution.negative
+                        ],
+                        backgroundColor: [
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(156, 163, 175, 0.8)',
+                            'rgba(239, 68, 68, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgb(34, 197, 94)',
+                            'rgb(156, 163, 175)',
+                            'rgb(239, 68, 68)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayReviews(reviews) {
+            const reviewsList = document.getElementById('reviewsList');
+            reviewsList.innerHTML = '';
+
+            reviews.slice(0, 20).forEach(review => {
+                const sentimentColor = 
+                    review.sentiment.label === 'positive' ? 'text-green-600' :
+                    review.sentiment.label === 'negative' ? 'text-red-600' :
+                    'text-gray-600';
+
+                const sentimentIcon = 
+                    review.sentiment.label === 'positive' ? 'fa-smile' :
+                    review.sentiment.label === 'negative' ? 'fa-frown' :
+                    'fa-meh';
+
+                const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+
+                const reviewHtml = `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+                        <div class="flex items-start justify-between mb-2">
+                            <div>
+                                <h4 class="font-semibold text-gray-800">${escapeHtml(review.title)}</h4>
+                                <p class="text-sm text-gray-600">by ${escapeHtml(review.author)}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-yellow-400 text-lg">${stars}</div>
+                                <div class="${sentimentColor} text-sm">
+                                    <i class="fas ${sentimentIcon}"></i>
+                                    ${review.sentiment.label}
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-gray-700 mb-2">${escapeHtml(review.review)}</p>
+                        <div class="flex items-center gap-4 text-xs text-gray-500">
+                            <span><i class="far fa-calendar mr-1"></i>${new Date(review.date).toLocaleDateString()}</span>
+                            <span><i class="fas fa-code-branch mr-1"></i>v${escapeHtml(review.version)}</span>
+                            <span>Polarity: ${review.sentiment.polarity}</span>
+                        </div>
+                    </div>
+                `;
+                reviewsList.innerHTML += reviewHtml;
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
